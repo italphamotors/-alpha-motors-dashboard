@@ -1,0 +1,528 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Alpha Motors — Dashboard Complet</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #020817; color: #e2e8f0; }
+        
+        /* Login */
+        .login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #020817;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .login-card {
+            background: #0f172a;
+            border: 1px solid #38bdf8;
+            border-radius: 16px;
+            padding: 40px;
+            width: 350px;
+            text-align: center;
+        }
+        .login-card h2 { color: #38bdf8; margin-bottom: 20px; }
+        .login-card input {
+            width: 100%;
+            padding: 12px;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            color: white;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        .login-card button {
+            width: 100%;
+            padding: 12px;
+            background: #38bdf8;
+            border: none;
+            border-radius: 8px;
+            color: #020817;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .login-card button:hover { background: #0ea5e9; }
+        .error-msg { color: #f87171; margin-top: 10px; display: none; }
+        
+        /* Dashboard */
+        .dashboard { display: none; max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 15px; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .kpi-card { background: #0f172a; border-radius: 12px; padding: 20px; border: 1px solid #1e293b; }
+        .kpi-value { font-size: 32px; font-weight: bold; margin-top: 10px; }
+        .blue { color: #38bdf8; }
+        .green { color: #4ade80; }
+        .orange { color: #fbbf24; }
+        .purple { color: #c084fc; }
+        
+        /* Filtres */
+        .filter-bar {
+            background: #0f172a;
+            border-radius: 12px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+            border: 1px solid #1e293b;
+        }
+        .filter-bar label { font-size: 12px; color: #94a3b8; }
+        .filter-bar input, .filter-bar select {
+            padding: 8px 12px;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            color: white;
+            font-size: 13px;
+        }
+        .filter-bar button {
+            padding: 8px 16px;
+            background: #1e293b;
+            border: none;
+            border-radius: 8px;
+            color: #38bdf8;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .filter-bar button:hover { background: #334155; }
+        
+        /* Graphiques */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .chart-card {
+            background: #0f172a;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #1e293b;
+        }
+        .chart-card h3 { margin-bottom: 15px; font-size: 14px; color: #94a3b8; }
+        canvas { max-height: 250px; width: 100%; }
+        
+        /* Tableau */
+        .table-card {
+            background: #0f172a;
+            border-radius: 12px;
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #1e293b; }
+        th { color: #94a3b8; font-size: 12px; cursor: pointer; }
+        th:hover { color: #38bdf8; }
+        .btn { padding: 8px 16px; background: #1e293b; border: none; border-radius: 8px; color: white; cursor: pointer; }
+        .btn:hover { background: #334155; }
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            display: inline-block;
+        }
+        .status-Gagné { background: #4ade8020; color: #4ade80; }
+        .status-Chaud { background: #fbbf2420; color: #fbbf24; }
+        .status-Normal { background: #38bdf820; color: #38bdf8; }
+        .status-Perdu { background: #f8717120; color: #f87171; }
+        .search-box input {
+            padding: 8px 12px;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            color: white;
+            width: 250px;
+        }
+        @media (max-width: 800px) {
+            .charts-grid { grid-template-columns: 1fr; }
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginOverlay" class="login-overlay">
+    <div class="login-card">
+        <i class="fa-solid fa-car-side" style="font-size: 48px; color: #38bdf8; margin-bottom: 20px;"></i>
+        <h2>Alpha Motors</h2>
+        <input type="password" id="passwordInput" placeholder="Mot de passe">
+        <button onclick="verifierMotDePasse()">Se connecter</button>
+        <div id="errorMsg" class="error-msg">Mot de passe incorrect</div>
+    </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="dashboard">
+    <div class="header">
+        <div>
+            <h1>Alpha Motors</h1>
+            <p>Dashboard commercial — Tunnel de vente</p>
+        </div>
+        <button class="btn" onclick="rafraichirDonnees()"><i class="fa-solid fa-arrows-rotate"></i> Actualiser</button>
+    </div>
+
+    <!-- KPI CARDS -->
+    <div class="kpi-grid">
+        <div class="kpi-card"><div>📊 Total Leads</div><div class="kpi-value blue" id="totalLeads">—</div></div>
+        <div class="kpi-card"><div>🏆 Ventes gagnées</div><div class="kpi-value green" id="totalVentes">—</div></div>
+        <div class="kpi-card"><div>💰 CA Généré</div><div class="kpi-value orange" id="totalCA">—</div></div>
+        <div class="kpi-card"><div>📈 Taux conversion</div><div class="kpi-value purple" id="tauxConv">—</div></div>
+    </div>
+
+    <!-- FILTRES DATE -->
+    <div class="filter-bar">
+        <i class="fa-solid fa-calendar" style="color: #38bdf8;"></i>
+        <span style="font-size: 13px;">Filtrer par date :</span>
+        <label>Du</label>
+        <input type="date" id="dateStart">
+        <label>Au</label>
+        <input type="date" id="dateEnd">
+        <button onclick="appliquerFiltres()"><i class="fa-solid fa-filter"></i> Appliquer</button>
+        <button onclick="resetFiltres()"><i class="fa-solid fa-eraser"></i> Réinitialiser</button>
+        <button onclick="filtreAujourdhui()">📆 Aujourd'hui</button>
+        <button onclick="filtreSemaine()">📅 Cette semaine</button>
+        <button onclick="filtreMois()">📆 Ce mois</button>
+    </div>
+
+    <!-- GRAPHIQUES -->
+    <div class="charts-grid">
+        <div class="chart-card"><h3>📈 Évolution des Leads (14 derniers jours)</h3><canvas id="chartLeads"></canvas></div>
+        <div class="chart-card"><h3>💰 Évolution du CA (14 derniers jours)</h3><canvas id="chartCA"></canvas></div>
+        <div class="chart-card"><h3>🥧 Répartition des statuts</h3><canvas id="chartPie"></canvas></div>
+        <div class="chart-card"><h3>👥 Performance par vendeur</h3><canvas id="chartVendeurs"></canvas></div>
+    </div>
+
+    <!-- TABLEAU + RECHERCHE -->
+    <div style="margin: 20px 0; display: flex; gap: 10px; flex-wrap: wrap;">
+        <div class="search-box"><i class="fa-solid fa-search"></i> <input type="text" id="searchInput" placeholder="Rechercher nom, société, téléphone..."></div>
+        <select id="filterStatut" class="btn" style="background:#1e293b;">
+            <option value="">Tous statuts</option>
+            <option value="Gagné">Gagné</option>
+            <option value="Chaud">Chaud</option>
+            <option value="Normal">Normal</option>
+            <option value="Perdu">Perdu</option>
+        </select>
+        <select id="filterVendeur" class="btn" style="background:#1e293b;">
+            <option value="">Tous vendeurs</option>
+        </select>
+    </div>
+
+    <div class="table-card">
+        <table>
+            <thead>
+                <tr><th onclick="trierPar('date')">Date <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="trierPar('contact')">Contact <i class="fa-solid fa-sort"></i></th>
+                    <th>Société</th>
+                    <th>Statut</th>
+                    <th onclick="trierPar('ca')">CA Attendu <i class="fa-solid fa-sort"></i></th>
+                    <th>Vendeur</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+    <div style="margin-top: 10px; text-align: center; font-size: 12px; color: #64748b;" id="infoCount"></div>
+</div>
+
+<script>
+    // ========== AUTHENTIFICATION ==========
+    const MOT_DE_PASSE = "Alpha2026";
+    
+    function verifierMotDePasse() {
+        const inputPwd = document.getElementById('passwordInput').value;
+        const errorDiv = document.getElementById('errorMsg');
+        if (inputPwd === MOT_DE_PASSE) {
+            document.getElementById('loginOverlay').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            chargerDonnees();
+        } else {
+            errorDiv.style.display = 'block';
+        }
+    }
+    document.getElementById('passwordInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') verifierMotDePasse();
+    });
+
+    // ========== VARIABLES GLOBALES ==========
+    let toutesDonnees = null;
+    let prospectsFiltres = [];
+    let charts = { leads: null, ca: null, pie: null, vendeurs: null };
+    let triColonne = 'date';
+    let triOrdre = 'desc';
+    
+    const API_URL = 'https://api.jsonbin.io/v3/b/6a1ac3e121f9ee59d29d6bce/latest';
+    const API_KEY = '$2a$10$SfqckqT3HuZgZJu38noMh.d.1GYrf/GuhHLHNPIECEfY72h1ywUBa';
+
+    // ========== FORMATAGE ==========
+    function formaterCFA(v) {
+        if (!v) return '0 FCFA';
+        if (v >= 1000000) return (v/1000000).toFixed(1) + ' M FCFA';
+        if (v >= 1000) return (v/1000).toFixed(0) + ' K FCFA';
+        return v.toLocaleString('fr-FR') + ' FCFA';
+    }
+
+    function formaterDate(iso) {
+        if (!iso) return '—';
+        try { return new Date(iso).toLocaleDateString('fr-FR'); }
+        catch(e) { return iso; }
+    }
+
+    // ========== FILTRES DATE ==========
+    let dateDebut = null, dateFin = null;
+    
+    function estDansIntervalle(dateStr) {
+        if (!dateDebut && !dateFin) return true;
+        if (!dateStr) return true;
+        const d = new Date(dateStr);
+        if (dateDebut && d < dateDebut) return false;
+        if (dateFin && d > dateFin) return false;
+        return true;
+    }
+    
+    function appliquerFiltres() {
+        dateDebut = document.getElementById('dateStart').value ? new Date(document.getElementById('dateStart').value) : null;
+        dateFin = document.getElementById('dateEnd').value ? new Date(document.getElementById('dateEnd').value) : null;
+        filtrerEtAfficher();
+    }
+    
+    function resetFiltres() {
+        document.getElementById('dateStart').value = '';
+        document.getElementById('dateEnd').value = '';
+        dateDebut = null;
+        dateFin = null;
+        filtrerEtAfficher();
+    }
+    
+    function filtreAujourdhui() {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('dateStart').value = today;
+        document.getElementById('dateEnd').value = today;
+        appliquerFiltres();
+    }
+    
+    function filtreSemaine() {
+        const now = new Date();
+        const debut = new Date(now);
+        debut.setDate(now.getDate() - now.getDay());
+        const fin = new Date(debut);
+        fin.setDate(debut.getDate() + 6);
+        document.getElementById('dateStart').value = debut.toISOString().split('T')[0];
+        document.getElementById('dateEnd').value = fin.toISOString().split('T')[0];
+        appliquerFiltres();
+    }
+    
+    function filtreMois() {
+        const now = new Date();
+        const debut = new Date(now.getFullYear(), now.getMonth(), 1);
+        const fin = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        document.getElementById('dateStart').value = debut.toISOString().split('T')[0];
+        document.getElementById('dateEnd').value = fin.toISOString().split('T')[0];
+        appliquerFiltres();
+    }
+
+    // ========== TRI ==========
+    function trierPar(colonne) {
+        if (triColonne === colonne) {
+            triOrdre = triOrdre === 'asc' ? 'desc' : 'asc';
+        } else {
+            triColonne = colonne;
+            triOrdre = 'desc';
+        }
+        filtrerEtAfficher();
+    }
+    
+    // ========== FILTRAGE COMPLET ==========
+    function filtrerEtAfficher() {
+        if (!toutesDonnees) return;
+        
+        const recherche = document.getElementById('searchInput')?.value.toLowerCase() || '';
+        const statutFiltre = document.getElementById('filterStatut')?.value || '';
+        const vendeurFiltre = document.getElementById('filterVendeur')?.value || '';
+        
+        let prospects = toutesDonnees.prospects || [];
+        
+        // Filtre date
+        prospects = prospects.filter(p => estDansIntervalle(p.date));
+        
+        // Filtre recherche
+        if (recherche) {
+            prospects = prospects.filter(p => 
+                (p.contact || '').toLowerCase().includes(recherche) ||
+                (p.societe || '').toLowerCase().includes(recherche) ||
+                (p.telephone || '').includes(recherche)
+            );
+        }
+        
+        // Filtre statut
+        if (statutFiltre) prospects = prospects.filter(p => p.statut === statutFiltre);
+        
+        // Filtre vendeur
+        if (vendeurFiltre) prospects = prospects.filter(p => p.vendeur === vendeurFiltre);
+        
+        // Tri
+        prospects.sort((a,b) => {
+            let va = a[triColonne] || '';
+            let vb = b[triColonne] || '';
+            if (triColonne === 'ca') { va = parseFloat(va)||0; vb = parseFloat(vb)||0; }
+            if (triColonne === 'date') { va = new Date(va); vb = new Date(vb); }
+            if (va < vb) return triOrdre === 'asc' ? -1 : 1;
+            if (va > vb) return triOrdre === 'asc' ? 1 : -1;
+            return 0;
+        });
+        
+        prospectsFiltres = prospects;
+        afficherTableau();
+        mettreAJourKPIs();
+        mettreAJourGraphiques();
+    }
+    
+    // ========== AFFICHAGE TABLEAU ==========
+    function afficherTableau() {
+        const tbody = document.getElementById('tableBody');
+        const info = document.getElementById('infoCount');
+        info.textContent = `${prospectsFiltres.length} prospect${prospectsFiltres.length !== 1 ? 's' : ''} affiché${prospectsFiltres.length !== 1 ? 's' : ''}`;
+        
+        if (prospectsFiltres.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center">Aucun prospect trouvé</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = prospectsFiltres.slice(0, 100).map(p => `
+            <tr>
+                <td>${formaterDate(p.date)}</td>
+                <td>${p.contact || '—'}</td>
+                <td>${p.societe || '—'}</td>
+                <td><span class="status-badge status-${p.statut}">${p.statut || '—'}</span></td>
+                <td>${formaterCFA(p.revenu_attendu)}</td>
+                <td>${p.vendeur || '—'}</td>
+            </tr>
+        `).join('');
+    }
+    
+    // ========== KPIS ==========
+    function mettreAJourKPIs() {
+        const totalLeads = prospectsFiltres.length;
+        const totalVentes = prospectsFiltres.filter(p => p.statut === 'Gagné').length;
+        const totalCA = prospectsFiltres.filter(p => p.statut === 'Gagné').reduce((s,p) => s + (parseFloat(p.revenu_attendu)||0), 0);
+        const taux = totalLeads > 0 ? Math.round((totalVentes / totalLeads) * 100) : 0;
+        
+        document.getElementById('totalLeads').textContent = totalLeads;
+        document.getElementById('totalVentes').textContent = totalVentes;
+        document.getElementById('totalCA').textContent = formaterCFA(totalCA);
+        document.getElementById('tauxConv').textContent = taux + '%';
+    }
+    
+    // ========== GRAPHIQUES ==========
+    function mettreAJourGraphiques() {
+        // Évolution par date
+        const evolution = {};
+        prospectsFiltres.forEach(p => {
+            const date = p.date ? new Date(p.date).toLocaleDateString('fr-FR') : 'inconnu';
+            if (!evolution[date]) evolution[date] = { leads: 0, ca: 0 };
+            evolution[date].leads++;
+            evolution[date].ca += parseFloat(p.revenu_attendu) || 0;
+        });
+        const dates = Object.keys(evolution).slice(-14);
+        const leadsData = dates.map(d => evolution[d].leads);
+        const caData = dates.map(d => evolution[d].ca / 1000000);
+        
+        // Graphique Leads
+        const ctxLeads = document.getElementById('chartLeads').getContext('2d');
+        if (charts.leads) charts.leads.destroy();
+        charts.leads = new Chart(ctxLeads, {
+            type: 'line',
+            data: { labels: dates, datasets: [{ label: 'Leads', data: leadsData, borderColor: '#38bdf8', backgroundColor: '#38bdf820', fill: true, tension: 0.4 }] },
+            options: { responsive: true, maintainAspectRatio: true }
+        });
+        
+        // Graphique CA
+        const ctxCA = document.getElementById('chartCA').getContext('2d');
+        if (charts.ca) charts.ca.destroy();
+        charts.ca = new Chart(ctxCA, {
+            type: 'line',
+            data: { labels: dates, datasets: [{ label: 'CA (M FCFA)', data: caData, borderColor: '#fbbf24', backgroundColor: '#fbbf2420', fill: true, tension: 0.4 }] },
+            options: { responsive: true, maintainAspectRatio: true }
+        });
+        
+        // Pie chart statuts
+        const statuts = { 'Gagné':0, 'Chaud':0, 'Normal':0, 'Perdu':0 };
+        prospectsFiltres.forEach(p => { if (statuts[p.statut] !== undefined) statuts[p.statut]++; });
+        const ctxPie = document.getElementById('chartPie').getContext('2d');
+        if (charts.pie) charts.pie.destroy();
+        charts.pie = new Chart(ctxPie, {
+            type: 'doughnut',
+            data: { labels: Object.keys(statuts), datasets: [{ data: Object.values(statuts), backgroundColor: ['#4ade80', '#fbbf24', '#38bdf8', '#f87171'] }] },
+            options: { responsive: true, maintainAspectRatio: true }
+        });
+        
+        // Performance vendeurs
+        const vendeurs = {};
+        prospectsFiltres.forEach(p => {
+            if (p.vendeur) {
+                if (!vendeurs[p.vendeur]) vendeurs[p.vendeur] = { leads: 0, gagne: 0 };
+                vendeurs[p.vendeur].leads++;
+                if (p.statut === 'Gagné') vendeurs[p.vendeur].gagne++;
+            }
+        });
+        const ctxVend = document.getElementById('chartVendeurs').getContext('2d');
+        if (charts.vendeurs) charts.vendeurs.destroy();
+        charts.vendeurs = new Chart(ctxVend, {
+            type: 'bar',
+            data: { labels: Object.keys(vendeurs), datasets: [
+                { label: 'Leads', data: Object.values(vendeurs).map(v => v.leads), backgroundColor: '#38bdf8' },
+                { label: 'Ventes', data: Object.values(vendeurs).map(v => v.gagne), backgroundColor: '#4ade80' }
+            ] },
+            options: { responsive: true, maintainAspectRatio: true }
+        });
+        
+        // Mettre à jour filtre vendeur
+        const selectVendeur = document.getElementById('filterVendeur');
+        const currentVal = selectVendeur.value;
+        selectVendeur.innerHTML = '<option value="">Tous vendeurs</option>';
+        Object.keys(vendeurs).sort().forEach(v => {
+            selectVendeur.innerHTML += `<option value="${v}">${v}</option>`;
+        });
+        selectVendeur.value = currentVal;
+    }
+    
+    // ========== CHARGEMENT DONNÉES ==========
+    async function chargerDonnees() {
+        try {
+            const reponse = await fetch(API_URL, { headers: { 'X-Master-Key': API_KEY } });
+            const json = await reponse.json();
+            toutesDonnees = json.record;
+            filtrerEtAfficher();
+        } catch(err) {
+            console.error(err);
+            document.getElementById('tableBody').innerHTML = '<tr><td colspan="6" style="text-align:center">❌ Erreur de chargement</td></tr>';
+        }
+    }
+    
+    function rafraichirDonnees() {
+        chargerDonnees();
+    }
+    
+    // Écouteurs
+    document.getElementById('searchInput').addEventListener('input', filtrerEtAfficher);
+    document.getElementById('filterStatut').addEventListener('change', filtrerEtAfficher);
+    document.getElementById('filterVendeur').addEventListener('change', filtrerEtAfficher);
+    
+    // Démarrer
+    chargerDonnees();
+</script>
+</body>
+</html>

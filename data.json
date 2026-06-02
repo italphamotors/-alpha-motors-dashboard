@@ -1,0 +1,12 @@
+{
+  "total_leads": 24,
+  "total_gagne": 3,
+  "ca_genere": 45500000,
+  "taux_conversion": 12.5,
+  "prospects": [
+    {"date": "2026-06-01", "contact": "Jean Dupont", "societe": "Alpha SARL", "statut": "Chaud", "revenu_attendu": 25000000, "vendeur": "Martin"},
+    {"date": "2026-06-01", "contact": "Marie Ndiaye", "societe": "Beta SA", "statut": "Normal", "revenu_attendu": 12000000, "vendeur": "Sophie"},
+    {"date": "2026-05-31", "contact": "Paul Fokou", "societe": "Gamma SARL", "statut": "Gagné", "revenu_attendu": 8500000, "vendeur": "Martin"},
+    {"date": "2026-05-30", "contact": "Claire Tchami", "societe": "Delta SA", "statut": "Normal", "revenu_attendu": 0, "vendeur": "Jean"}
+  ]
+}
