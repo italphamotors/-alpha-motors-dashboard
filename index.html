@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -264,8 +263,8 @@
     let triColonne = 'date';
     let triOrdre = 'desc';
     
-    const API_URL = 'https://api.jsonbin.io/v3/b/6a1ac3e121f9ee59d29d6bce/latest';
-    const API_KEY = '$2a$10$SfqckqT3HuZgZJu38noMh.d.1GYrf/GuhHLHNPIECEfY72h1ywUBa';
+    // ⚠️ REMPLACÉ : plus de JSONBin, on lit directement depuis GitHub
+    const GITHUB_RAW_URL = 'https://raw.githubusercontent.com/italphamotors/-alpha-motors-dashboard/main/data.json';
 
     // ========== FORMATAGE ==========
     function formaterCFA(v) {
@@ -403,11 +402,11 @@
         
         tbody.innerHTML = prospectsFiltres.slice(0, 100).map(p => `
             <tr>
-                <td>${formaterDate(p.date)}</td>
-                <td>${p.contact || '—'}</td>
+                <td class="td-date">${formaterDate(p.date)}</td>
+                <td class="td-contact">${p.contact || '—'}</td>
                 <td>${p.societe || '—'}</td>
                 <td><span class="status-badge status-${p.statut}">${p.statut || '—'}</span></td>
-                <td>${formaterCFA(p.revenu_attendu)}</td>
+                <td class="td-ca">${formaterCFA(p.revenu_attendu)}</td>
                 <td>${p.vendeur || '—'}</td>
             </tr>
         `).join('');
@@ -499,12 +498,12 @@
         selectVendeur.value = currentVal;
     }
     
-    // ========== CHARGEMENT DONNÉES ==========
+    // ========== CHARGEMENT DONNÉES DEPUIS GITHUB ==========
     async function chargerDonnees() {
         try {
-            const reponse = await fetch(API_URL, { headers: { 'X-Master-Key': API_KEY } });
-            const json = await reponse.json();
-            toutesDonnees = json.record;
+            const reponse = await fetch(GITHUB_RAW_URL);
+            if (!reponse.ok) throw new Error('HTTP ' + reponse.status);
+            toutesDonnees = await reponse.json();
             filtrerEtAfficher();
         } catch(err) {
             console.error(err);
